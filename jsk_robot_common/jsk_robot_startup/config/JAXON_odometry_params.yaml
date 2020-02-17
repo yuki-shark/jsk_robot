@@ -37,7 +37,8 @@ biped_particle_odometry:
   init_sigma_z: 0.001
   init_sigma_roll: 0.001
   sigma_pitch: 0.001
-  sigma_yaw: 0.05
+  # sigma_yaw: 0.05
+  sigma_yaw: 0.5
   min_sampling_rate: 5
 
 biped_particle_odometry_iir_filter:
@@ -55,7 +56,8 @@ viso_odometry_offset:
   sigma_z: 0.03
   sigma_roll: 0.3
   sigma_pitch: 0.3
-  sigma_yaw: 0.03
+  # sigma_yaw: 0.03
+  sigma_yaw: 0.000001
   mean_x: 0.0
   mean_y: 0.0
   mean_yaw: 0.0
@@ -72,9 +74,8 @@ biped_odometry_offset:
   sigma_z: 0.015
   sigma_roll: 0.001
   sigma_pitch: 0.001
-  sigma_yaw: 0.06
+  # sigma_yaw: 0.06
+  sigma_yaw: 0.2
   mean_x: 0.002
   mean_y: 0.0
   mean_yaw: 0.0
-  
-  

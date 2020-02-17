@@ -8,7 +8,7 @@ import threading
 import itertools
 import tf
 import time
-from operator import itemgetter 
+from operator import itemgetter
 
 from nav_msgs.msg import Odometry
 from geometry_msgs.msg import PoseWithCovariance, TwistWithCovariance, Twist, Pose, Point, Quaternion, Vector3, TransformStamped
@@ -40,11 +40,11 @@ class EKFGPFOdometry(ParticleOdometry):
             self.prev_rpy = None
 
     # EKF
-    def source_odom_callback(self, msg):        
+    def source_odom_callback(self, msg):
         with self.lock:
             self.source_odom = msg
             self.ekf_update(self.odom, self.source_odom)
-    
+
     def ekf_update(self, current_odom, source_odom):
         dt = (source_odom.header.stamp - current_odom.header.stamp).to_sec()
         if dt > 0:
@@ -53,7 +53,8 @@ class EKFGPFOdometry(ParticleOdometry):
             current_odom.twist = source_odom.twist
             new_pose_with_covariance = self.update_pose_with_covariance(current_odom.pose, source_odom.twist, dt)
             current_odom.pose = new_pose_with_covariance
-                    
+            # current_odom.pose.pose.position = new_pose_with_covariance.pose.position
+
     ## particle filter functions
     # sampling poses from EKF result (current_pose_with_covariance)
     def measure_odom_callback(self, msg):
@@ -68,11 +69,23 @@ class EKFGPFOdometry(ParticleOdometry):
                 self.weights = self.weighting(self.particles, self.min_weight)
                 # resampling
                 self.particles = self.resampling(self.particles, self.weights)
-                # estimate new pdf 
+                # estimate new pdf
                 self.approximate_odometry(self.particles, self.weights)
                 # wait next measurement
                 self.last_sampling_time = self.measure_odom.header.stamp
-            
+                # overwrite orientation
+                # self.odom.pose.pose.orientation = msg.pose.pose.orientation
+                odom_orientation_eular = tf.transformations.euler_from_quaternion((self.odom.pose.pose.orientation.x,
+                                                                                   self.odom.pose.pose.orientation.y,
+                                                                                   self.odom.pose.pose.orientation.z,
+                                                                                   self.odom.pose.pose.orientation.w))
+                measure_odom_orientation_eular = tf.transformations.euler_from_quaternion((msg.pose.pose.orientation.x,
+                                                                                           msg.pose.pose.orientation.y,
+                                                                                           msg.pose.pose.orientation.z,
+                                                                                           msg.pose.pose.orientation.w))
+                q = tf.transformations.quaternion_from_euler(odom_orientation_eular[0], odom_orientation_eular[1], measure_odom_orientation_eular[2])
+                self.odom.pose.pose.orientation = Quaternion(q[0], q[1], q[2], q[3])
+
     def sampling(self, current_pose_with_covariance):
         pose_mean = self.convert_pose_to_list(current_pose_with_covariance.pose)
         pose_cov_matrix = zip(*[iter(current_pose_with_covariance.covariance)]*6)
@@ -82,7 +95,7 @@ class EKFGPFOdometry(ParticleOdometry):
         # use only important particels
         combined_prt_weight = zip(self.particles, self.weights)
         selected_prt_weight = zip(*sorted(combined_prt_weight, key = itemgetter(1), reverse = True)[:int(self.valid_particle_num)]) # [(p0, w0), (p1, w1), ..., (pN, wN)] -> [(sorted_p0, sorted_w0), (sorted_p1, sorted_w1), ..., (sorted_pN', sorted_wN')] -> [(sorted_p0, ..., sorted_pN'), (sorted_w0, ..., sorted_wN')]
-        # estimate gaussian distribution for Odometry msg 
+        # estimate gaussian distribution for Odometry msg
         mean, cov = self.guess_normal_distribution(selected_prt_weight[0], selected_prt_weight[1])
         # overwrite pose pdf
         self.odom.pose.pose = self.convert_list_to_pose(mean)
@@ -97,7 +110,7 @@ class EKFGPFOdometry(ParticleOdometry):
         self.update_diagnostics(self.particles, self.weights, self.odom.header.stamp)
         # update prev_rpy to prevent jump of angles
         self.prev_rpy = transform_quaternion_to_euler([self.odom.pose.pose.orientation.x, self.odom.pose.pose.orientation.y, self.odom.pose.pose.orientation.z, self.odom.pose.pose.orientation.w], self.prev_rpy)
-        
+
     # main functions
     def update(self):
         if not self.odom or not self.source_odom:
