@@ -84,6 +84,9 @@ class EKFGPFOdometry(ParticleOdometry):
                                                                                            msg.pose.pose.orientation.z,
                                                                                            msg.pose.pose.orientation.w))
                 q = tf.transformations.quaternion_from_euler(odom_orientation_eular[0], odom_orientation_eular[1], measure_odom_orientation_eular[2])
+                # q = tf.transformations.quaternion_from_euler(measure_odom_orientation_eular[0], measure_odom_orientation_eular[1], measure_odom_orientation_eular[2])
+                # q = tf.transformations.quaternion_from_euler(odom_orientation_eular[0], measure_odom_orientation_eular[1], measure_odom_orientation_eular[2])
+                # q = tf.transformations.quaternion_from_euler(0, 0, measure_odom_orientation_eular[2])
                 self.odom.pose.pose.orientation = Quaternion(q[0], q[1], q[2], q[3])
 
     def sampling(self, current_pose_with_covariance):
